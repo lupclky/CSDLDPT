@@ -6,7 +6,7 @@ import pandas as pd
 import sys
 
 # --- Các hằng số và cấu hình ---
-DATASET_PATH = "percussion sound dataset/Gộp"
+DATASET_PATH = "percussion sound dataset/Gop"
 CSV_FILE_PATH = "audio_features.csv"
 N_MFCC = 20
 SR = 44100

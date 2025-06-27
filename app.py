@@ -83,14 +83,15 @@ def find_nearest_sounds_segmented(input_segments_features, db_features, db_mappi
     return results[:k]
 
 @st.cache_data
-def load_features_from_csv(csv_path):
-    """Tải dữ liệu đặc trưng và mapping từ file CSV."""
-    df = pd.read_csv(csv_path)
-    # Tạo mapping: index -> {file_name, segment_index}
+def load_feature_df(csv_path):
+    """Tải toàn bộ dữ liệu đặc trưng dưới dạng một pandas DataFrame."""
+    return pd.read_csv(csv_path)
+
+def get_features_and_mapping_from_df(df):
+    """Trích xuất mảng đặc trưng và mapping từ DataFrame."""
     db_mapping = df[['file_name', 'segment_index']].to_dict('records')
-    # Lấy ra các cột đặc trưng
     feature_columns = [col for col in df.columns if col not in ['file_name', 'segment_index']]
-    features_array = df[feature_columns].to_numpy()
+    features_array = df[feature_columns].to_numpy(dtype=np.float64)
     return features_array, db_mapping
 
 # --- Giao diện Streamlit ---
@@ -122,11 +123,12 @@ if not os.path.exists(CSV_FILE_PATH):
                 st.code(e.stderr)
 else:
     # Giao diện chính khi đã có file CSV
-    db_features, db_mapping = load_features_from_csv(CSV_FILE_PATH)
+    feature_df = load_feature_df(CSV_FILE_PATH)
+    db_features, db_mapping = get_features_and_mapping_from_df(feature_df)
     st.success(f"Đã tải thành công đặc trưng của {len(db_features)} đoạn từ `{CSV_FILE_PATH}`.")
 
     with st.expander("Xem nội dung file CSV đã xử lý (audio_features.csv)"):
-        st.dataframe(pd.read_csv(CSV_FILE_PATH))
+        st.dataframe(feature_df)
 
     st.header("Bước 1: Tải lên file âm thanh của bạn")
     uploaded_file = st.file_uploader("Tải lên file âm thanh (WAV, MP3) để tìm kiếm", type=["wav", "mp3"])
@@ -140,6 +142,39 @@ else:
         st.audio(tmp_file_path)
 
         st.header("Bước 2: Phân tích và Trích xuất Đặc trưng theo từng đoạn")
+
+        with st.expander("Giải thích các đặc trưng âm thanh được sử dụng"):
+            st.markdown("""
+            Hệ thống trích xuất các đặc trưng sau từ mỗi đoạn âm thanh dài 1 giây để tạo ra một "vector đặc trưng" đại diện cho đoạn đó.
+            Vector này sau đó được chuẩn hóa để đảm bảo các đặc trưng có thang đo khác nhau không ảnh hưởng đến kết quả.
+            """)
+            
+            st.subheader("1. MFCC (Mel-Frequency Cepstral Coefficients)")
+            st.markdown("Là một tập hợp các hệ số mô tả hình dạng tổng thể của phổ âm thanh. Đây là một trong những đặc trưng quan trọng nhất để nhận dạng âm thanh và giọng nói. Chúng ta lấy giá trị trung bình của 20 hệ số MFCC đầu tiên.")
+
+            st.subheader("2. Zero-Crossing Rate (Tỷ lệ băng qua không)")
+            st.markdown("Đo tốc độ thay đổi của tín hiệu bằng cách đếm số lần tín hiệu đi qua giá trị 0. Đặc trưng này hữu ích để phân biệt âm thanh có âm vực và âm thanh nhiễu (âm thanh gõ so với âm thanh xì).")
+            st.latex(r''' ZCR = \frac{1}{T-1} \sum_{t=1}^{T-1} \mathbb{1}(s_t \cdot s_{t-1} < 0) ''')
+            st.markdown(r"Trong đó $s$ là tín hiệu và $\mathbb{1}$ là hàm chỉ thị (indicator function).")
+
+            st.subheader("3. Spectral Centroid (Trọng tâm phổ)")
+            st.markdown("Xác định 'trung tâm khối lượng' của phổ, cho biết tần số nào chiếm ưu thế. Giá trị cao hơn tương ứng với âm thanh 'sáng' hơn.")
+            st.latex(r''' C_t = \frac{\sum_{n=1}^{N} f(n) x_t(n)}{\sum_{n=1}^{N} x_t(n)} ''')
+            st.markdown(r"Trong đó $x_t(n)$ là biên độ của tần số $f(n)$ tại frame $t$.")
+
+            st.subheader("4. Spectral Rolloff (Ngưỡng cuốn phổ)")
+            st.markdown("Là tần số mà dưới nó chứa một tỷ lệ phần trăm xác định (thường là 85%) của tổng năng lượng phổ. Nó đo lường sự lệch của hình dạng phổ.")
+
+            st.subheader("5. RMS Energy (Năng lượng RMS)")
+            st.markdown("Đo lường biên độ (độ to) của tín hiệu. Đây là căn bậc hai của trung bình bình phương của tín hiệu trong một khoảng thời gian.")
+            st.latex(r''' RMS = \sqrt{\frac{1}{N} \sum_{n=0}^{N-1} [x(n)]^2} ''')
+            st.markdown(r"Trong đó $x(n)$ là giá trị của mẫu tín hiệu.")
+            
+            st.subheader("6. Spectral Flatness (Độ phẳng phổ)")
+            st.markdown("Đo lường mức độ 'giống nhiễu' của một phổ. Giá trị thấp cho thấy các đỉnh phổ rõ rệt (âm thanh có âm vực), trong khi giá trị cao cho thấy phổ phẳng hơn, giống nhiễu trắng. Nó là tỉ lệ giữa trung bình nhân và trung bình cộng của phổ năng lượng.")
+            st.latex(r''' \text{Flatness} = \frac{ \left( \prod_{n=0}^{N-1} p(n) \right)^{\frac{1}{N}} }{ \frac{1}{N} \sum_{n=0}^{N-1} p(n) } ''')
+            st.markdown(r"Trong đó $p(n)$ là năng lượng (power) của tần số thứ $n$.")
+            
         input_segments_features = extract_segment_features(tmp_file_path)
         os.remove(tmp_file_path)
 
@@ -154,6 +189,12 @@ else:
                     results = find_nearest_sounds_segmented(input_segments_features, db_features, db_mapping, k=5)
                 
                 st.header("Kết quả tìm kiếm (Top 5)")
+
+                with st.expander("Giải thích về 'min_distance' (Khoảng cách Euclidean)"):
+                    st.markdown("Khoảng cách được sử dụng để đo lường sự khác biệt giữa hai vector đặc trưng (vector của một đoạn trong file bạn tải lên và vector của một đoạn trong cơ sở dữ liệu). Chúng tôi sử dụng **Khoảng cách Euclidean**.")
+                    st.latex(r''' D(p, q) = \sqrt{\sum_{i=1}^{n} (q_i - p_i)^2} ''')
+                    st.markdown(r"Trong đó $p = (p_1, ..., p_n)$ và $q = (q_1, ..., q_n)$ là hai vector đặc trưng. Giá trị khoảng cách càng nhỏ, hai đoạn âm thanh càng giống nhau.")
+
                 if not results:
                     st.warning("Không tìm thấy kết quả nào.")
                 else:
