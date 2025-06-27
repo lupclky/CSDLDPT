@@ -88,8 +88,22 @@ def create_feature_csv(dataset_path, csv_path):
     
     # Tạo và lưu DataFrame
     df = pd.DataFrame.from_records(features_data, columns=columns)
-    df.to_csv(csv_path, index=False)
-    print(f"\nHoàn tất! Đã lưu thành công {len(df)} vector đặc trưng vào file '{csv_path}'")
+    if features_data:
+        print(f"Tổng cộng đã trích xuất được {len(features_data)} vector đặc trưng từ {len(audio_files)} file.")
+        
+        # Tạo một pandas DataFrame từ danh sách các đặc trưng
+        feature_df = pd.DataFrame(features_data, columns=columns)
+        
+        # --- GHI RA FILE CSV ---
+        # Đây là bước cuối cùng và quan trọng nhất.
+        # Toàn bộ dữ liệu đặc trưng đã xử lý sẽ được lưu vào file CSV_FILE_PATH.
+        # File này sẽ được ứng dụng chính (app.py) đọc để truy xuất.
+        feature_df.to_csv(csv_path, index=False)
+        # -------------------------
+        
+        print(f"Đã lưu thành công các đặc trưng vào file '{csv_path}'.")
+    else:
+        print("Không có file âm thanh nào được xử lý.")
 
 if __name__ == "__main__":
     create_feature_csv(DATASET_PATH, CSV_FILE_PATH) 

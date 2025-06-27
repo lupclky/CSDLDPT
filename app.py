@@ -85,7 +85,12 @@ def find_nearest_sounds_segmented(input_segments_features, db_features, db_mappi
 @st.cache_data
 def load_feature_df(csv_path):
     """Tải toàn bộ dữ liệu đặc trưng dưới dạng một pandas DataFrame."""
-    return pd.read_csv(csv_path)
+    # --- ĐỌC TỪ FILE CSV ---
+    # Đây là điểm mà ứng dụng đọc toàn bộ CSDL đặc trưng đã được tiền xử lý.
+    # Dữ liệu được tải vào một DataFrame của pandas để xử lý trong bộ nhớ.
+    df = pd.read_csv(csv_path)
+    # -------------------------
+    return df
 
 def get_features_and_mapping_from_df(df):
     """Trích xuất mảng đặc trưng và mapping từ DataFrame."""
