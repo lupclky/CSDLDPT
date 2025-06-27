@@ -10,7 +10,7 @@ import subprocess
 
 # --- Các hằng số ---
 CSV_FILE_PATH = "audio_features.csv"
-DATASET_PATH = "percussion sound dataset/Gộp"
+DATASET_PATH = "percussion sound dataset/Gop"
 N_MFCC = 20
 SR = 44100
 SEGMENT_DURATION = 1.0
@@ -200,7 +200,7 @@ else:
                 else:
                     for result in results:
                         st.subheader(f"File: {result['file_name']}")
-                        st.write(f"Độ tương đồng tốt nhất (min_distance): {result['min_distance']:.4f} (càng nhỏ càng giống)")
+                        st.write(f"Độ tương đồng tốt nhất (min_distance): {result['min_distance']} (càng nhỏ càng giống)")
                         result_file_path = os.path.join(DATASET_PATH, result['file_name'])
                         st.audio(result_file_path)
                         st.divider() 
