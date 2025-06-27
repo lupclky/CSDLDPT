@@ -97,7 +97,7 @@ def get_features_and_mapping_from_df(df):
 # --- Giao diện Streamlit ---
 
 st.set_page_config(layout="wide")
-st.title("Hệ thống truy xuất âm thanh (Nâng cao - Dựa trên phân đoạn)")
+st.title("BTL HỆ CƠ SỞ DỮ LIỆU ĐA PHƯƠNG TIỆN - HỆ CSDL LƯU TRỮ VÀ TÌM KIẾM NHẠC CỤ THUỘC BỘ GÕ")
 
 if not os.path.exists(CSV_FILE_PATH):
     # Giao diện khi chưa có file CSV (không đổi)
